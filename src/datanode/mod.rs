@@ -2,19 +2,25 @@ mod routes;
 mod models;
 mod helpers;
 mod filesystem;
-mod datanode;
+mod handlers;
 
 use std::{net::SocketAddr};
 use tokio::net::TcpListener;
 use tracing::{info};
-use crate::filesystem::init_storage_dir;
-use crate::models::DataNodeState;
+use self::filesystem::init_storage_dir;
+use self::models::DataNodeState;
 
-#[tokio::main]
-async fn main() {
+pub async fn start() {
     tracing_subscriber::fmt::init();
 
-    let storage_dir = init_storage_dir("./data").await;
+    let storage_dir = init_storage_dir("./data")
+        .await
+        .unwrap_or_else(|e| {
+            eprintln!("Failed to initialize storage directory: {e}");
+            std::process::exit(1);
+        });
+
+    println!("Using storage dir: {:?}", storage_dir);
 
     let state = DataNodeState {
         storage_dir,

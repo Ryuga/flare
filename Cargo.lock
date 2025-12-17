@@ -281,6 +281,7 @@ dependencies = [
  "futures-util",
  "hex",
  "hyper",
+ "libc",
  "rocksdb",
  "sanitize-filename",
  "serde",

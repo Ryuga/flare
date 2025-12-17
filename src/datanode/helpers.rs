@@ -10,3 +10,14 @@ pub fn get_chunk_path(base: &PathBuf, chunk_id: &str) -> PathBuf {
     let p2 = &chunk_id[2..4];
     base.join("chunks").join(p1).join(p2).join(chunk_id)
 }
+
+/// Safety check if disk is full
+pub fn is_disk_full(err: &std::io::Error) -> bool {
+    matches!(
+        err.kind(),
+        std::io::ErrorKind::OutOfMemory
+            | std::io::ErrorKind::WriteZero
+            | std::io::ErrorKind::Other
+    ) || err.raw_os_error() == Some(libc::ENOSPC)
+        || err.raw_os_error() == Some(libc::EDQUOT)
+}

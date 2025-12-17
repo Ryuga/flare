@@ -18,3 +18,4 @@ tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }
 sanitize-filename = "0.5"
 tokio-util = "0.7.16"
 futures-util = "0.3.31"
+libc = "0.2.169"
