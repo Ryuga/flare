@@ -1,17 +1,12 @@
-use axum::http::StatusCode;
-use axum::response::{IntoResponse, Response};
-use serde::de::DeserializeOwned;
-use tracing::error;
+use std::path::PathBuf;
 
-pub fn handle_db_get<T: DeserializeOwned>(key: &[u8], value: Option<Vec<u8>>) -> Result<Option<T>, Response> {
-    match value {
-        Some(v) => match serde_json::from_slice::<T>(&v) {
-            Ok(parsed) => Ok(Some(parsed)),
-            Err(e) => {
-                error!(%e, "failed to deserialize meta");
-                Err((StatusCode::INTERNAL_SERVER_ERROR, "failed to parse value").into_response())
-            }
-        },
-        None => Ok(None),
-    }
+
+/// Constructs chunk path from chunk id.
+/// format: store/ab/cd/<chunk_id>. ab, cd - first 2 chars of chunk id
+/// We store chunks under subfolders as we don't want filesystem slowdown
+/// Subfolder categorization would allow faster lookups and garbage collection.
+pub fn get_chunk_path(base: &PathBuf, chunk_id: &str) -> PathBuf {
+    let p1 = &chunk_id[0..2];
+    let p2 = &chunk_id[2..4];
+    base.join("chunks").join(p1).join(p2).join(chunk_id)
 }

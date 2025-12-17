@@ -1,13 +1,9 @@
 use axum::Router;
-use axum::routing::{delete, get, head, put};
-use crate::models::AppState;
-use crate::storage;
-
-pub fn create_router(state: AppState) -> Router {
+use axum::routing::{put};
+use crate::models::{DataNodeState};
+use crate::datanode::put_chunk;
+pub fn create_router(state: DataNodeState) -> Router {
     Router::new()
-        .route("/:bucket/*key", head(storage::head_object))
-        .route("/:bucket/*key", get(storage::get_object))
-        .route("/:bucket/*key", put(storage::put_object))
-        .route("/:bucket/*key", delete(storage::delete_object))
+        .route("/chunk/:id", put(put_chunk))
         .with_state(state)
 }

@@ -2,8 +2,8 @@ use std::path::{Path, PathBuf};
 use tokio::fs;
 use std::fs as std_fs;
 
-pub async fn init_storage_dir<P: AsRef<Path>>(path: P) -> PathBuf {
-    let path_buf = PathBuf::from(path.as_ref());
+pub async fn init_storage_dir<P: AsRef<Path>>(storage_path: P) -> PathBuf {
+    let path_buf = PathBuf::from(storage_path.as_ref());
 
     // Ensure absolute path
     let abs_path = std_fs::canonicalize(&path_buf)
