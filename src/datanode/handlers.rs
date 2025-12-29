@@ -4,14 +4,15 @@ use axum::{
     http::StatusCode,
     response::IntoResponse,
 };
-use tokio::fs::{self, File};
 use tracing::error;
-use super::models::DataNodeState;
-use super::helpers::{get_chunk_path, is_disk_full};
 use futures_util::{TryStreamExt};
 use hyper::Response;
+use tokio::fs::{self, File};
 use tokio::io::AsyncWriteExt;
 use tokio_util::io::ReaderStream;
+
+use super::models::DataNodeState;
+use super::helpers::{get_chunk_path, is_disk_full};
 
 const MAX_CHUNK_SIZE: u64 = 64 * 1024 * 1024;
 
@@ -19,7 +20,7 @@ const MAX_CHUNK_SIZE: u64 = 64 * 1024 * 1024;
 pub async fn put_chunk(
     State(state): State<DataNodeState>,
     Path(chunk_id): Path<String>,
-    body: Body,
+    body: Body
 ) -> impl IntoResponse {
 
     if chunk_id.len() < 8 {
@@ -95,7 +96,7 @@ pub async fn put_chunk(
 
 pub async fn get_chunk(
     State(state): State<DataNodeState>,
-    Path(chunk_id): Path<String>,
+    Path(chunk_id): Path<String>
 ) -> impl IntoResponse {
     let path = get_chunk_path(&state.storage_dir, &chunk_id);
 
@@ -114,7 +115,7 @@ pub async fn get_chunk(
 
 pub async fn delete_chunk(
     State(state): State<DataNodeState>,
-    Path(chunk_id): Path<String>,
+    Path(chunk_id): Path<String>
 ) -> impl IntoResponse {
     let path = get_chunk_path(&state.storage_dir, &chunk_id);
 
