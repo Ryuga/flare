@@ -1,11 +1,16 @@
 use axum::{
     body::Body,
-    extract::Path,
+    extract::{Path, State},
     http::StatusCode,
     response::IntoResponse,
 };
+use axum::http::Response;
+use bytes::Bytes;
 use futures_util::TryStreamExt;
+use reqwest::Client;
 use uuid::Uuid;
+use crate::api::metadata::{ChunkMeta, ObjectMeta};
+use crate::api::models::ApiState;
 use crate::api::processor::ChunkStream;
 use super::{
     client::DataNodeClient,
@@ -13,6 +18,7 @@ use super::{
 };
 
 pub async fn put_object(
+    State(state): State<ApiState>,
     Path(key): Path<String>,
     body: Body,
 ) -> impl IntoResponse {
@@ -21,12 +27,18 @@ pub async fn put_object(
         DataNode {
             base_url: "http://127.0.0.1:9000".into(),
         },
+        DataNode{
+            base_url: "http://127.0.0.1:9001".into(),
+        }
     ];
 
     let client = DataNodeClient::new();
     let mut stream = ChunkStream::new(body);
 
-    // let mut chunk_index = 0;
+    let mut chunks = Vec::new();
+    let mut total_size: usize = 0;
+    let mut chunk_index: usize = 0;
+
 
     while let Some(chunk) = match stream.try_next().await {
         Ok(v) => v,
@@ -37,6 +49,8 @@ pub async fn put_object(
     } {
         let chunk_id = format!("{}-{}", key, Uuid::new_v4());
         let node = select_node(&nodes);
+        let size = chunk.len();
+
 
         if let Err(e) = client
             .put_chunk(&node.base_url, &chunk_id, chunk)
@@ -46,14 +60,65 @@ pub async fn put_object(
             return StatusCode::INTERNAL_SERVER_ERROR.into_response();
         }
 
-        // chunk_index += 1;
+        chunks.push(
+            ChunkMeta{
+                index: chunk_index,
+                node: node.base_url.clone(),
+                chunk_id,
+                size,
+            }
+        );
+        total_size += size;
+        chunk_index += 1;
     }
+
+    state.metadata.set(
+        key,
+        ObjectMeta{
+            size: total_size,
+            chunks,
+        }
+    );
 
     StatusCode::CREATED.into_response()
 }
 
 pub async fn get_object(
-    Path(_key): Path<String>,
+    State(state): State<ApiState>,
+    Path(key): Path<String>,
 ) -> impl IntoResponse {
-    (StatusCode::NOT_IMPLEMENTED, "GET not implemented")
+
+    let meta = match state.metadata.get(&key) {
+        Some(m) => m,
+        None => return StatusCode::NOT_FOUND.into_response(),
+    };
+
+    let client = Client::new();
+    let mut data = Vec::with_capacity(meta.size as usize);
+
+    let mut chunks = meta.chunks.clone();
+    chunks.sort_by_key(|c| c.index);
+
+    for chunk in chunks {
+        let url = format!("{}/chunk/{}", chunk.node, chunk.chunk_id);
+
+        let resp = match client.get(url).send().await {
+            Ok(r) => r,
+            Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        };
+
+        if !resp.status().is_success() {
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+
+        let bytes = match resp.bytes().await {
+            Ok(b) => b,
+            Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        };
+
+        data.extend_from_slice(&bytes);
+    }
+
+    Response::builder().status(StatusCode::OK).body(Bytes::from(data).into()).unwrap()
+
 }
