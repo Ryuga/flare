@@ -36,4 +36,9 @@ impl MetadataStore {
         let mut guard = self.store.lock().unwrap();
         guard.insert(key, meta);
     }
+
+    pub fn remove(&self, key: &str) {
+        let mut guard = self.store.lock().unwrap();
+        guard.remove(key);
+    }
 }

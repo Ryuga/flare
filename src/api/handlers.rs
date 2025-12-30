@@ -122,3 +122,32 @@ pub async fn get_object(
     Response::builder().status(StatusCode::OK).body(Bytes::from(data).into()).unwrap()
 
 }
+
+pub async fn delete_object(
+    State(state): State<ApiState>,
+    Path(key): Path<String>,
+) -> impl IntoResponse {
+
+    let meta = match state.metadata.get(&key) {
+        Some(m) => m,
+        None => return StatusCode::NOT_FOUND.into_response(),
+    };
+
+    let client = Client::new();
+
+    for chunk in meta.chunks {
+        let url = format!("{}/chunk/{}", chunk.node, chunk.chunk_id);
+
+        let resp = match client.delete(url).send().await {
+            Ok(r) => r,
+            Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        };
+
+        if !resp.status().is_success() {
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    }
+    state.metadata.remove(&key);
+
+    StatusCode::OK.into_response()
+}
