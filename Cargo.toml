@@ -19,5 +19,7 @@ sanitize-filename = "0.5"
 tokio-util = "0.7.16"
 futures-util = "0.3.31"
 libc = "0.2.169"
-reqwest = "0.12.25"
+reqwest = { version =  "0.12.25", features = ["stream"] }
 uuid = { version = "1.19.0", features = ["v4"] }
+async-stream = "0.3.6"
+futures-core = "0.3.31"

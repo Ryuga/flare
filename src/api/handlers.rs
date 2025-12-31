@@ -5,13 +5,13 @@ use axum::{
     response::IntoResponse,
 };
 use axum::http::Response;
-use bytes::Bytes;
 use futures_util::TryStreamExt;
 use reqwest::Client;
 use uuid::Uuid;
 use crate::api::metadata::{ChunkMeta, ObjectMeta};
 use crate::api::models::ApiState;
 use crate::api::processor::ChunkStream;
+use crate::api::streaming::stream_object;
 use super::{
     client::DataNodeClient,
     placement::{select_node, DataNode},
@@ -93,34 +93,16 @@ pub async fn get_object(
         None => return StatusCode::NOT_FOUND.into_response(),
     };
 
-    let client = Client::new();
-    let mut data = Vec::with_capacity(meta.size as usize);
-
     let mut chunks = meta.chunks.clone();
     chunks.sort_by_key(|c| c.index);
 
-    for chunk in chunks {
-        let url = format!("{}/chunk/{}", chunk.node, chunk.chunk_id);
+    let stream = stream_object(chunks);
 
-        let resp = match client.get(url).send().await {
-            Ok(r) => r,
-            Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response()
-        };
-
-        if !resp.status().is_success() {
-            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-        }
-
-        let bytes = match resp.bytes().await {
-            Ok(b) => b,
-            Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
-        };
-
-        data.extend_from_slice(&bytes);
-    }
-
-    Response::builder().status(StatusCode::OK).body(Bytes::from(data).into()).unwrap()
-
+    Response::builder()
+        .status(StatusCode::OK)
+        .header("Content-Length", meta.size)
+        .body(Body::from_stream(stream))
+        .unwrap()
 }
 
 pub async fn delete_object(

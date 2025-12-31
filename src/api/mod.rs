@@ -5,6 +5,7 @@ mod placement;
 mod client;
 mod metadata;
 mod models;
+mod streaming;
 
 use std::{net::SocketAddr};
 use tokio::net::TcpListener;
