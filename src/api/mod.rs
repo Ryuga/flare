@@ -6,6 +6,7 @@ mod client;
 mod metadata;
 mod models;
 mod streaming;
+mod parallel_streaming;
 
 use std::{net::SocketAddr};
 use tokio::net::TcpListener;

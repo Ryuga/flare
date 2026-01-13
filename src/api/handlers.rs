@@ -10,6 +10,7 @@ use reqwest::Client;
 use uuid::Uuid;
 use crate::api::metadata::{ChunkMeta, ObjectMeta};
 use crate::api::models::ApiState;
+use crate::api::parallel_streaming::parallel_stream_object;
 use crate::api::processor::ChunkStream;
 use crate::api::streaming::stream_object;
 use super::{
@@ -96,7 +97,7 @@ pub async fn get_object(
     let mut chunks = meta.chunks.clone();
     chunks.sort_by_key(|c| c.index);
 
-    let stream = stream_object(chunks);
+    let stream = parallel_stream_object(chunks);
 
     Response::builder()
         .status(StatusCode::OK)
